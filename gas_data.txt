@@ -1,0 +1,24 @@
+Current Polygon Gas Prices (from PolygonScan):
+- Standard: 28.67 GWei (30-60 secs)
+- Fast: 30 GWei (10-30 secs) 
+- Rapid: 30.5 GWei (5-10 secs)
+
+POL Price: $0.180021 (shown on PolygonScan)
+
+Base Fee: 0 GWei
+Priority Fee: 25.00 GWei for all speeds
+
+Pending Queue: 14,368 transactions
+Average Block Size: 108 transactions
+Average Utilization: 39.88%
+
+
+MATIC Price (from CoinGecko):
+- Current Price: $0.1801 USD
+- 24h Change: -1.9%
+- Market Cap: $263,133,740
+- 24h Trading Volume: $1,621,400
+- Circulating Supply: 1.5 Billion MATIC
+
+Note: MATIC will transition to POL on September 4th, 2025
+

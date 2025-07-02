@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>USDT Clone - Web3 Integration</title>
+    <script src="https://cdn.ethers.io/lib/ethers-5.7.2.umd.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        input {
+            padding: 8px;
+            margin: 5px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            width: 200px;
+        }
+        .status {
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .info {
+            background-color: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        .warning {
+            background-color: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>USDT Clone - Web3 Integration Demo</h1>
+        <p><strong>Contract Address:</strong> <span id="contractAddress">0x[YOUR_CONTRACT_ADDRESS_HERE]</span></p>
+        
+        <!-- Wallet Connection Section -->
+        <div class="section">
+            <h2>1. Wallet Connection</h2>
+            <button id="connectWallet">Connect MetaMask</button>
+            <div id="walletStatus" class="status info" style="display: none;"></div>
+        </div>
+
+        <!-- Balance Check Section -->
+        <div class="section">
+            <h2>2. Check USDT Balance</h2>
+            <button id="checkBalance" disabled>Check My Balance</button>
+            <div id="balanceStatus" class="status info" style="display: none;"></div>
+        </div>
+
+        <!-- Transfer Section -->
+        <div class="section">
+            <h2>3. Transfer USDT</h2>
+            <input type="text" id="transferTo" placeholder="Recipient Address" />
+            <input type="number" id="transferAmount" placeholder="Amount (USDT)" />
+            <button id="transferTokens" disabled>Transfer</button>
+            <div id="transferStatus" class="status info" style="display: none;"></div>
+        </div>
+
+        <!-- Mint Section (Owner Only) -->
+        <div class="section">
+            <h2>4. Mint USDT (Owner Only)</h2>
+            <input type="text" id="mintTo" placeholder="Mint to Address" />
+            <input type="number" id="mintAmount" placeholder="Amount (USDT)" />
+            <button id="mintTokens" disabled>Mint</button>
+            <div id="mintStatus" class="status info" style="display: none;"></div>
+        </div>
+
+        <!-- Approve Section -->
+        <div class="section">
+            <h2>5. Approve Spending</h2>
+            <input type="text" id="approveSpender" placeholder="Spender Address" />
+            <input type="number" id="approveAmount" placeholder="Amount (USDT)" />
+            <button id="approveTokens" disabled>Approve</button>
+            <div id="approveStatus" class="status info" style="display: none;"></div>
+        </div>
+
+        <!-- TransferFrom Section -->
+        <div class="section">
+            <h2>6. Transfer From (Approved Amount)</h2>
+            <input type="text" id="transferFromOwner" placeholder="From Address" />
+            <input type="text" id="transferFromTo" placeholder="To Address" />
+            <input type="number" id="transferFromAmount" placeholder="Amount (USDT)" />
+            <button id="transferFromTokens" disabled>Transfer From</button>
+            <div id="transferFromStatus" class="status info" style="display: none;"></div>
+        </div>
+    </div>
+
+    <script>
+        // Contract ABI (Application Binary Interface)
+        const contractABI = [
+            "function name() view returns (string)",
+            "function symbol() view returns (string)",
+            "function decimals() view returns (uint8)",
+            "function totalSupply() view returns (uint256)",
+            "function balanceOf(address owner) view returns (uint256)",
+            "function transfer(address to, uint256 amount) returns (bool)",
+            "function approve(address spender, uint256 amount) returns (bool)",
+            "function transferFrom(address from, address to, uint256 amount) returns (bool)",
+            "function allowance(address owner, address spender) view returns (uint256)",
+            "function mint(address to, uint256 amount)",
+            "function owner() view returns (address)"
+        ];
+
+        // Replace with your actual contract address
+        const contractAddress = "0x[YOUR_CONTRACT_ADDRESS_HERE]";
+        
+        let provider;
+        let signer;
+        let contract;
+        let userAddress;
+
+        // Update contract address display
+        document.getElementById('contractAddress').textContent = contractAddress;
+
+        // Connect Wallet
+        document.getElementById('connectWallet').addEventListener('click', async () => {
+            try {
+                if (typeof window.ethereum !== 'undefined') {
+                    // Request account access
+                    await window.ethereum.request({ method: 'eth_requestAccounts' });
+                    
+                    provider = new ethers.providers.Web3Provider(window.ethereum);
+                    signer = provider.getSigner();
+                    userAddress = await signer.getAddress();
+                    
+                    // Check if connected to Polygon Mainnet
+                    const network = await provider.getNetwork();
+                    if (network.chainId !== 137) {
+                        showStatus('walletStatus', 'Please switch to Polygon Mainnet (Chain ID: 137)', 'warning');
+                        return;
+                    }
+                    
+                    contract = new ethers.Contract(contractAddress, contractABI, signer);
+                    
+                    showStatus('walletStatus', `Connected: ${userAddress}`, 'success');
+                    
+                    // Enable other buttons
+                    document.getElementById('checkBalance').disabled = false;
+                    document.getElementById('transferTokens').disabled = false;
+                    document.getElementById('mintTokens').disabled = false;
+                    document.getElementById('approveTokens').disabled = false;
+                    document.getElementById('transferFromTokens').disabled = false;
+                    
+                } else {
+                    showStatus('walletStatus', 'MetaMask not detected. Please install MetaMask.', 'error');
+                }
+            } catch (error) {
+                showStatus('walletStatus', `Error: ${error.message}`, 'error');
+            }
+        });
+
+        // Check Balance
+        document.getElementById('checkBalance').addEventListener('click', async () => {
+            try {
+                const balance = await contract.balanceOf(userAddress);
+                const formattedBalance = ethers.utils.formatEther(balance);
+                showStatus('balanceStatus', `Your USDT Balance: ${formattedBalance} USDT`, 'success');
+            } catch (error) {
+                showStatus('balanceStatus', `Error: ${error.message}`, 'error');
+            }
+        });
+
+        // Transfer Tokens
+        document.getElementById('transferTokens').addEventListener('click', async () => {
+            try {
+                const to = document.getElementById('transferTo').value;
+                const amount = document.getElementById('transferAmount').value;
+                
+                if (!to || !amount) {
+                    showStatus('transferStatus', 'Please fill in all fields', 'warning');
+                    return;
+                }
+                
+                const amountInWei = ethers.utils.parseEther(amount);
+                const tx = await contract.transfer(to, amountInWei);
+                
+                showStatus('transferStatus', `Transaction sent: ${tx.hash}`, 'info');
+                
+                await tx.wait();
+                showStatus('transferStatus', `Transfer successful! ${amount} USDT sent to ${to}`, 'success');
+                
+            } catch (error) {
+                showStatus('transferStatus', `Error: ${error.message}`, 'error');
+            }
+        });
+
+        // Mint Tokens (Owner Only)
+        document.getElementById('mintTokens').addEventListener('click', async () => {
+            try {
+                const to = document.getElementById('mintTo').value;
+                const amount = document.getElementById('mintAmount').value;
+                
+                if (!to || !amount) {
+                    showStatus('mintStatus', 'Please fill in all fields', 'warning');
+                    return;
+                }
+                
+                const amountInWei = ethers.utils.parseEther(amount);
+                const tx = await contract.mint(to, amountInWei);
+                
+                showStatus('mintStatus', `Transaction sent: ${tx.hash}`, 'info');
+                
+                await tx.wait();
+                showStatus('mintStatus', `Mint successful! ${amount} USDT minted to ${to}`, 'success');
+                
+            } catch (error) {
+                showStatus('mintStatus', `Error: ${error.message}`, 'error');
+            }
+        });
+
+        // Approve Tokens
+        document.getElementById('approveTokens').addEventListener('click', async () => {
+            try {
+                const spender = document.getElementById('approveSpender').value;
+                const amount = document.getElementById('approveAmount').value;
+                
+                if (!spender || !amount) {
+                    showStatus('approveStatus', 'Please fill in all fields', 'warning');
+                    return;
+                }
+                
+                const amountInWei = ethers.utils.parseEther(amount);
+                const tx = await contract.approve(spender, amountInWei);
+                
+                showStatus('approveStatus', `Transaction sent: ${tx.hash}`, 'info');
+                
+                await tx.wait();
+                showStatus('approveStatus', `Approval successful! ${spender} can now spend ${amount} USDT`, 'success');
+                
+            } catch (error) {
+                showStatus('approveStatus', `Error: ${error.message}`, 'error');
+            }
+        });
+
+        // Transfer From
+        document.getElementById('transferFromTokens').addEventListener('click', async () => {
+            try {
+                const from = document.getElementById('transferFromOwner').value;
+                const to = document.getElementById('transferFromTo').value;
+                const amount = document.getElementById('transferFromAmount').value;
+                
+                if (!from || !to || !amount) {
+                    showStatus('transferFromStatus', 'Please fill in all fields', 'warning');
+                    return;
+                }
+                
+                const amountInWei = ethers.utils.parseEther(amount);
+                const tx = await contract.transferFrom(from, to, amountInWei);
+                
+                showStatus('transferFromStatus', `Transaction sent: ${tx.hash}`, 'info');
+                
+                await tx.wait();
+                showStatus('transferFromStatus', `TransferFrom successful! ${amount} USDT transferred from ${from} to ${to}`, 'success');
+                
+            } catch (error) {
+                showStatus('transferFromStatus', `Error: ${error.message}`, 'error');
+            }
+        });
+
+        // Helper function to show status messages
+        function showStatus(elementId, message, type) {
+            const element = document.getElementById(elementId);
+            element.textContent = message;
+            element.className = `status ${type}`;
+            element.style.display = 'block';
+        }
+
+        // Listen for account changes
+        if (typeof window.ethereum !== 'undefined') {
+            window.ethereum.on('accountsChanged', (accounts) => {
+                if (accounts.length === 0) {
+                    showStatus('walletStatus', 'Please connect to MetaMask', 'warning');
+                } else {
+                    location.reload();
+                }
+            });
+
+            window.ethereum.on('chainChanged', (chainId) => {
+                location.reload();
+            });
+        }
+    </script>
+</body>
+</html>
+
