@@ -7,7 +7,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
 
 contract USDTClone is ERC20, Ownable, ERC20Burnable {
-    constructor() ERC20("Tether USD Simulation", "USDT") Ownable(msg.sender) {}
+    constructor() ERC20("Tether USD", "USDT") Ownable(msg.sender) {}
 
     function mint(address to, uint256 amount) public onlyOwner {
         _mint(to, amount);
